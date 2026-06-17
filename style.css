@@ -1,0 +1,323 @@
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    padding:0;
+
+    font-family:
+        "Segoe UI",
+        "Hiragino Sans",
+        sans-serif;
+
+    background:#f4f6f8;
+}
+
+.root{
+    padding:16px;
+}
+
+/* ---------- 上部設定 ---------- */
+
+.top-panel{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:30px;
+
+    margin-bottom:15px;
+
+    flex-wrap:wrap;
+
+}
+
+.field{
+
+    display:flex;
+
+    flex-direction:row;
+
+    align-items:center;
+
+    gap:10px;
+
+}
+
+.field label{
+
+    font-weight:bold;
+
+    white-space:nowrap;
+
+    font-size:18px;
+
+}
+
+.field input{
+
+    width:100px;
+
+    font-size:20px;
+
+    padding:8px;
+
+    text-align:center;
+
+}
+
+/* ---------- メイン ---------- */
+
+.main{
+
+    display:flex;
+
+    gap:20px;
+
+}
+
+.left-panel{
+
+    flex:3;
+
+}
+
+.right-panel{
+
+    flex:2;
+
+    min-width:650px;
+
+}
+
+h2{
+
+    margin-top:0;
+
+    margin-bottom:10px;
+
+}
+
+/* ---------- テーブル ---------- */
+
+table{
+
+    width:auto;
+
+    border-collapse:collapse;
+
+    background:white;
+
+}
+
+th{
+
+    background:#1976d2;
+
+    color:white;
+
+    padding:10px;
+
+}
+
+td{
+
+    border:1px solid #ddd;
+
+    padding:4px;
+
+}
+
+td input{
+
+    width:100%;
+
+    border:none;
+
+    outline:none;
+
+    font-size:18px;
+
+    padding:8px;
+
+    text-align:center;
+
+}
+
+/* ---------- ボタン ---------- */
+
+.button-row{
+
+    margin-top:10px;
+
+    margin-bottom:20px;
+
+    display:flex;
+
+    gap:10px;
+
+}
+
+button{
+
+    padding:10px 18px;
+
+    font-size:18px;
+
+    cursor:pointer;
+
+}
+
+/* ---------- ステータス ---------- */
+
+.status{
+
+    margin-bottom:15px;
+
+}
+
+#status{
+
+    font-size:22px;
+
+    font-weight:bold;
+
+}
+
+/* ---------- 結果表示 ---------- */
+
+.result-block{
+
+    background:white;
+
+    margin-bottom:12px;
+
+    border-radius:8px;
+
+    padding:14px 18px;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+    min-height:72px;
+
+}
+
+.label{
+
+    width:180px;
+
+    font-size:20px;
+
+    font-weight:bold;
+
+    text-align:left;
+
+    white-space:nowrap;
+
+}
+
+.result-block > div:last-child{
+
+    flex:1;
+
+    text-align:right;
+
+}
+
+/* ---------- 数値 ---------- */
+
+.big{
+
+    font-size:36px;
+
+    font-weight:bold;
+
+}
+
+.largest{
+
+    font-size:42px;
+
+    font-weight:bold;
+
+}
+
+#required{
+
+    font-size:36px;
+
+    font-weight:bold;
+
+}
+
+#cal-avg{
+
+    font-size:30px;
+
+}
+
+#res-avg{
+
+    font-size:30px;
+
+}
+
+#actual{
+
+    font-size:42px;
+
+    font-weight:bold;
+
+    color:#1976d2;
+
+}
+
+#difference{
+
+    font-size:30px;
+
+    font-weight:bold;
+
+}
+
+#reach{
+
+    font-size:40px;
+
+    font-weight:bold;
+
+}
+
+#countdown{
+
+    font-size:40px;
+
+    font-weight:bold;
+
+    color:red;
+
+}
+
+/* ---------- 色 ---------- */
+
+.red{
+    color:red;
+}
+
+.green{
+    color:green;
+}
+
+.blue{
+    color:#1976d2;
+}
+
+.difference-block{
+    display:none;
+}

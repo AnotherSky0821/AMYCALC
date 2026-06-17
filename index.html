@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+
+<meta name="viewport"
+   content="width=device-width,initial-scale=1">
+
+<title>AMY</title>
+
+<link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#1976d2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="root">
+
+
+<div class="top-panel">
+
+    <div class="field">
+        <label>希望放射能(MBq)</label>
+        <input id="target" type="number" value="185">
+    </div>
+
+    <div class="field">
+        <label>作業時間(分)</label>
+        <input id="work" type="number" value="15">
+    </div>
+
+    <div class="field">
+        <label>半減期(分)</label>
+        <input id="half" type="number" value="109.8">
+    </div>
+
+</div>
+
+<div class="main">
+
+    <div class="left-panel">
+
+        <h2>検定放射能計</h2>
+
+        <table id="cal-table">
+            <thead>
+                <tr>
+                    <th>時刻</th>
+                    <th>MBq</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+
+        <h2>残量計</h2>
+
+        <table id="res-table">
+            <thead>
+                <tr>
+                    <th>時刻</th>
+                    <th>MBq</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+
+    </div>
+
+    <div class="right-panel">
+
+        <div class="status">
+            <span id="status">
+                待機中
+            </span>
+        </div>
+
+        <div class="result-block">
+            <div class="label">必要放射能</div>
+            <div id="required" class="big">
+                0.0 MBq
+            </div>
+        </div>
+
+        <div class="result-block">
+            <div class="label">検定平均</div>
+            <div id="cal-avg">
+                0.0 MBq
+            </div>
+        </div>
+
+        <div class="result-block">
+            <div class="label">残量平均</div>
+            <div id="res-avg">
+                0.0 MBq
+            </div>
+        </div>
+
+        <div class="result-block">
+            <div class="label">実投与量</div>
+            <div id="actual" class="largest">
+                0.0 MBq
+            </div>
+        </div>
+
+        <div class="result-block difference-block">
+            <div class="label">差分</div>
+            <div id="difference">
+                0.0 MBq
+            </div>
+        </div>
+
+        <div class="result-block">
+            <div class="label">到達時刻</div>
+            <div id="reach" class="largest">
+                --:--:--
+            </div>
+        </div>
+
+
+
+        <div class="result-block">
+            <div class="label">残り時間</div>
+            <div id="countdown" class="largest red">
+                --
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+
+</div>
+
+<script src="app.js"></script>
+
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker
+        .register('./service-worker.js');
+}
+</script>
+
+</body>
+</html>
