@@ -1,1025 +1,398 @@
 const DEFAULT_ROWS = 5;
 
+let timeOffsetMs = 0;
+
 const calTable =
-document.querySelector(
-"#cal-table tbody"
-);
+document.querySelector("#cal-table tbody");
 
 const resTable =
-document.querySelector(
-"#res-table tbody"
-);
+document.querySelector("#res-table tbody");
 
 const targetInput =
-document.getElementById(
-"target"
-);
+document.getElementById("target");
 
 const workInput =
-document.getElementById(
-"work"
-);
+document.getElementById("work");
 
 const halfInput =
-document.getElementById(
-"half"
-);
+document.getElementById("half");
+
+const offsetInput =
+document.getElementById("offset");
 
 const statusLabel =
-document.getElementById(
-"status"
-);
+document.getElementById("status");
 
 const requiredLabel =
-document.getElementById(
-"required"
-);
+document.getElementById("required");
 
 const calAvgLabel =
-document.getElementById(
-"cal-avg"
-);
+document.getElementById("cal-avg");
 
 const resAvgLabel =
-document.getElementById(
-"res-avg"
-);
+document.getElementById("res-avg");
 
 const actualLabel =
-document.getElementById(
-"actual"
-);
+document.getElementById("actual");
 
 const diffLabel =
-document.getElementById(
-"difference"
-);
+document.getElementById("difference");
 
 const reachLabel =
-document.getElementById(
-"reach"
-);
+document.getElementById("reach");
 
 const countdownLabel =
-document.getElementById(
-"countdown"
-);
+document.getElementById("countdown");
 
 function formatMbq(value){
-
-
-return value.toFixed(2)
-    + " MBq";
-
-
+    return value.toFixed(2) + " MBq";
 }
 
 function formatDiff(value){
-
-
-if(value >= 0){
-
-    return "+"
-        + value.toFixed(2)
-        + " MBq";
-}
-
-return value.toFixed(2)
-    + " MBq";
-
-
+    if(value >= 0){
+        return "+" + value.toFixed(2) + " MBq";
+    }
+    return value.toFixed(2) + " MBq";
 }
 
 function parseTimeToMinutes(text){
+    text = text.trim().replace(":","");
 
+    if(text.length === 3){
+        text = "0" + text;
+    }
 
-text = text
-    .trim()
-    .replace(":","");
+    if(text.length !== 4){
+        throw new Error("時刻は3桁または4桁で入力してください");
+    }
 
-if(text.length === 3){
+    const hh = parseInt(text.substring(0,2));
+    const mm = parseInt(text.substring(2,4));
 
-    text = "0" + text;
-}
+    if(hh < 0 || hh > 23){
+        throw new Error("時が不正です");
+    }
 
-if(text.length !== 4){
+    if(mm < 0 || mm > 59){
+        throw new Error("分が不正です");
+    }
 
-    throw new Error(
-        "時刻は3桁または4桁で入力してください"
-    );
-}
-
-const hh =
-    parseInt(
-        text.substring(0,2)
-    );
-
-const mm =
-    parseInt(
-        text.substring(2,4)
-    );
-
-if(hh < 0 || hh > 23){
-
-    throw new Error(
-        "時が不正です"
-    );
-}
-
-if(mm < 0 || mm > 59){
-
-    throw new Error(
-        "分が不正です"
-    );
-}
-
-return hh * 60 + mm;
-
-
+    return hh * 60 + mm;
 }
 
 function normalizeTime(text){
+    text = text.trim().replace(":","");
 
+    if(text.length === 3){
+        text = "0" + text;
+    }
 
-text = text
-    .trim()
-    .replace(":","");
+    if(text.length !== 4){
+        return text;
+    }
 
-if(text.length === 3){
+    const hh = parseInt(text.substring(0,2));
+    const mm = parseInt(text.substring(2,4));
 
-    text = "0" + text;
+    if(isNaN(hh) || isNaN(mm)){
+        return text;
+    }
+
+    if(hh < 0 || hh > 23){
+        return text;
+    }
+
+    if(mm < 0 || mm > 59){
+        return text;
+    }
+
+    return hh.toString().padStart(2,"0")
+        + ":" + mm.toString().padStart(2,"0");
 }
 
-if(text.length !== 4){
+function minutesToHms(totalMinutes){
+    const totalSeconds = Math.round(totalMinutes * 60);
 
-    return text;
+    const h = Math.floor(totalSeconds / 3600) % 24;
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+
+    return h.toString().padStart(2,"0")
+        + ":" + m.toString().padStart(2,"0")
+        + ":" + s.toString().padStart(2,"0");
 }
 
-const hh =
-    parseInt(
-        text.substring(0,2)
-    );
+function decayCorrectToBase(measuredMbq, measuredTime, baseTime, halfLife){
+    const dt = measuredTime - baseTime;
 
-const mm =
-    parseInt(
-        text.substring(2,4)
-    );
-
-if(isNaN(hh) ||
-   isNaN(mm)){
-
-    return text;
+    return measuredMbq * Math.pow(2, dt / halfLife);
 }
 
-if(hh < 0 ||
-   hh > 23){
-
-    return text;
+function calcRequiredDose(targetMbq, workMinutes, halfLife){
+    return targetMbq * Math.pow(2, workMinutes / halfLife);
 }
 
-if(mm < 0 ||
-   mm > 59){
-
-    return text;
+function calcReachMinutes(actualDose, targetDose, halfLife){
+    return halfLife * Math.log2(actualDose / targetDose);
 }
 
-return (
-    hh.toString()
-        .padStart(2,"0")
-    +
-    ":"
-    +
-    mm.toString()
-        .padStart(2,"0")
-);
+function correctedAverage(rows, baseTime, halfLife){
+    if(rows.length === 0){
+        return 0;
+    }
 
+    let sum = 0;
 
-}
-
-function minutesToHms(
-totalMinutes
-){
-
-
-const totalSeconds =
-    Math.round(
-        totalMinutes * 60
-    );
-
-const h =
-    Math.floor(
-        totalSeconds / 3600
-    ) % 24;
-
-const m =
-    Math.floor(
-        (
-            totalSeconds % 3600
-        ) / 60
-    );
-
-const s =
-    totalSeconds % 60;
-
-return (
-    h.toString()
-        .padStart(2,"0")
-    +
-    ":"
-    +
-    m.toString()
-        .padStart(2,"0")
-    +
-    ":"
-    +
-    s.toString()
-        .padStart(2,"0")
-);
-
-
-}
-
-function decayCorrectToBase(
-measuredMbq,
-measuredTime,
-baseTime,
-halfLife
-){
-
-
-const dt =
-    measuredTime
-    - baseTime;
-
-return (
-    measuredMbq *
-    Math.pow(
-        2,
-        dt / halfLife
-    )
-);
-
-
-}
-
-function calcRequiredDose(
-targetMbq,
-workMinutes,
-halfLife
-){
-
-
-return (
-    targetMbq *
-    Math.pow(
-        2,
-        workMinutes
-        /
-        halfLife
-    )
-);
-
-
-}
-
-function calcReachMinutes(
-actualDose,
-targetDose,
-halfLife
-){
-
-
-return (
-    halfLife *
-    Math.log2(
-        actualDose
-        /
-        targetDose
-    )
-);
-
-
-}
-
-function correctedAverage(
-rows,
-baseTime,
-halfLife
-){
-
-
-if(rows.length === 0){
-
-    return 0;
-}
-
-let sum = 0;
-
-rows.forEach(row=>{
-
-    sum +=
-        decayCorrectToBase(
+    rows.forEach(row=>{
+        sum += decayCorrectToBase(
             row.dose,
             row.time,
             baseTime,
             halfLife
         );
+    });
 
-});
-
-return (
-    sum /
-    rows.length
-);
-
-
+    return sum / rows.length;
 }
+
 function createRow(table){
 
+    const tr = document.createElement("tr");
 
-const tr =
-    document.createElement(
-        "tr"
-    );
+    const tdTime = document.createElement("td");
+    const tdDose = document.createElement("td");
 
-const tdTime =
-    document.createElement(
-        "td"
-    );
+    const timeInput = document.createElement("input");
+    const doseInput = document.createElement("input");
 
-const tdDose =
-    document.createElement(
-        "td"
-    );
+    timeInput.type = "text";
+    timeInput.placeholder = "HHMM";
 
-const timeInput =
-    document.createElement(
-        "input"
-    );
+    doseInput.type = "number";
+    doseInput.step = "0.1";
 
-const doseInput =
-    document.createElement(
-        "input"
-    );
-
-timeInput.type = "text";
-
-timeInput.placeholder =
-    "HHMM";
-
-doseInput.type =
-    "number";
-
-doseInput.step =
-    "0.1";
-
-timeInput.addEventListener(
-    "change",
-    ()=>{
-
-        timeInput.value =
-            normalizeTime(
-                timeInput.value
-            );
-
+    timeInput.addEventListener("change", ()=>{
+        timeInput.value = normalizeTime(timeInput.value);
         saveState();
-
         calculate();
+    });
 
-    }
-);
-
-doseInput.addEventListener(
-    "input",
-    ()=>{
-
+    doseInput.addEventListener("input", ()=>{
         saveState();
-
         calculate();
+    });
 
-    }
-);
+    tdTime.appendChild(timeInput);
+    tdDose.appendChild(doseInput);
 
-tdTime.appendChild(
-    timeInput
-);
+    tr.appendChild(tdTime);
+    tr.appendChild(tdDose);
 
-tdDose.appendChild(
-    doseInput
-);
-
-tr.appendChild(
-    tdTime
-);
-
-tr.appendChild(
-    tdDose
-);
-
-table.appendChild(
-    tr
-);
-
-
+    table.appendChild(tr);
 }
 
 function initializeTables(){
+    calTable.innerHTML = "";
+    resTable.innerHTML = "";
 
-
-calTable.innerHTML = "";
-
-resTable.innerHTML = "";
-
-for(
-    let i = 0;
-    i < DEFAULT_ROWS;
-    i++
-){
-
-    createRow(
-        calTable
-    );
-}
-
-for(
-    let i = 0;
-    i < DEFAULT_ROWS;
-    i++
-){
-
-    createRow(
-        resTable
-    );
-}
-
-
+    for(let i=0;i<DEFAULT_ROWS;i++){
+        createRow(calTable);
+        createRow(resTable);
+    }
 }
 
 function getRows(table){
+    const rows = [];
 
+    table.querySelectorAll("tr").forEach((tr,index)=>{
+        const inputs = tr.querySelectorAll("input");
 
-const rows = [];
+        const time = inputs[0].value.trim();
+        const dose = inputs[1].value.trim();
 
-table
-.querySelectorAll("tr")
-.forEach(
-    (
-        tr,
-        index
-    )=>{
+        if(time === "" && dose === ""){
+            return;
+        }
 
-    const inputs =
-        tr.querySelectorAll(
-            "input"
-        );
+        if(time === ""){
+            throw new Error((index+1)+"行目の時刻が未入力です");
+        }
 
-    const time =
-        inputs[0]
-        .value
-        .trim();
+        if(dose === ""){
+            throw new Error((index+1)+"行目のMBqが未入力です");
+        }
 
-    const dose =
-        inputs[1]
-        .value
-        .trim();
-
-    if(
-        time === ""
-        &&
-        dose === ""
-    ){
-
-        return;
-    }
-
-    if(
-        time === ""
-    ){
-
-        throw new Error(
-            (index + 1)
-            +
-            "行目の時刻が未入力です"
-        );
-    }
-
-    if(
-        dose === ""
-    ){
-
-        throw new Error(
-            (index + 1)
-            +
-            "行目のMBqが未入力です"
-        );
-    }
-
-    rows.push({
-
-        time:
-            parseTimeToMinutes(
-                time
-            ),
-
-        dose:
-            parseFloat(
-                dose
-            )
-
+        rows.push({
+            time: parseTimeToMinutes(time),
+            dose: parseFloat(dose)
+        });
     });
 
-});
-
-return rows;
-
-
+    return rows;
 }
 
-function validateTimeOrder(
-rows,
-title
-){
+function validateTimeOrder(rows,title){
+    let last = null;
 
-
-let last = null;
-
-rows.forEach(
-    (
-        row,
-        index
-    )=>{
-
-    if(
-        last !== null
-        &&
-        row.time < last
-    ){
-
-        throw new Error(
-
-            title
-            +
-            "\n"
-            +
-            (index + 1)
-            +
-            "行目\n時刻順が不正です"
-
-        );
-    }
-
-    last =
-        row.time;
-
-});
-
-
+    rows.forEach((row,index)=>{
+        if(last !== null && row.time < last){
+            throw new Error(title + "\n" + (index+1) + "行目\n時刻順が不正です");
+        }
+        last = row.time;
+    });
 }
 
-function serializeTable(
-table
-){
+function serializeTable(table){
+    const rows = [];
 
+    table.querySelectorAll("tr").forEach(tr=>{
+        const inputs = tr.querySelectorAll("input");
 
-const rows = [];
-
-table
-.querySelectorAll(
-    "tr"
-)
-.forEach(tr=>{
-
-    const inputs =
-        tr.querySelectorAll(
-            "input"
-        );
-
-    rows.push({
-
-        time:
-            inputs[0].value,
-
-        dose:
-            inputs[1].value
-
+        rows.push({
+            time: inputs[0].value,
+            dose: inputs[1].value
+        });
     });
 
-});
-
-return rows;
-
-
+    return rows;
 }
 
 function saveState(){
+    const state = {
+        target: targetInput.value,
+        work: workInput.value,
+        half: halfInput.value,
+        offset: offsetInput.value,
+        cal: serializeTable(calTable),
+        res: serializeTable(resTable)
+    };
 
-
-const state = {
-
-    target:
-        targetInput.value,
-
-    work:
-        workInput.value,
-
-    half:
-        halfInput.value,
-
-    cal:
-        serializeTable(
-            calTable
-        ),
-
-    res:
-        serializeTable(
-            resTable
-        )
-
-};
-
-localStorage.setItem(
-    "amy-state",
-    JSON.stringify(
-        state
-    )
-);
-
-
+    localStorage.setItem("amy-state", JSON.stringify(state));
 }
 
 function restoreState(){
+    const json = localStorage.getItem("amy-state");
+    if(!json) return;
 
+    const state = JSON.parse(json);
 
-const json =
-    localStorage.getItem(
-        "amy-state"
-    );
+    targetInput.value = state.target;
+    workInput.value = state.work;
+    halfInput.value = state.half;
 
-if(!json){
+    offsetInput.value = state.offset || 0;
+    timeOffsetMs = (state.offset || 0) * 1000;
 
-    return;
+    const fill = (table,data)=>{
+        const rows = table.querySelectorAll("tr");
+
+        rows.forEach((tr,index)=>{
+            if(!data[index]) return;
+
+            const inputs = tr.querySelectorAll("input");
+
+            inputs[0].value = data[index].time;
+            inputs[1].value = data[index].dose;
+        });
+    };
+
+    if(state.cal) fill(calTable,state.cal);
+    if(state.res) fill(resTable,state.res);
 }
 
-const state =
-    JSON.parse(
-        json
-    );
-
-targetInput.value =
-    state.target;
-
-workInput.value =
-    state.work;
-
-halfInput.value =
-    state.half;
-
-if(
-    state.cal
-){
-
-    const rows =
-        calTable
-        .querySelectorAll(
-            "tr"
-        );
-
-    rows.forEach(
-        (
-            tr,
-            index
-        )=>{
-
-        if(
-            !state.cal[index]
-        ){
-            return;
-        }
-
-        const inputs =
-            tr.querySelectorAll(
-                "input"
-            );
-
-        inputs[0].value =
-            state.cal[index]
-            .time;
-
-        inputs[1].value =
-            state.cal[index]
-            .dose;
-
-    });
-
-}
-
-if(
-    state.res
-){
-
-    const rows =
-        resTable
-        .querySelectorAll(
-            "tr"
-        );
-
-    rows.forEach(
-        (
-            tr,
-            index
-        )=>{
-
-        if(
-            !state.res[index]
-        ){
-            return;
-        }
-
-        const inputs =
-            tr.querySelectorAll(
-                "input"
-            );
-
-        inputs[0].value =
-            state.res[index]
-            .time;
-
-        inputs[1].value =
-            state.res[index]
-            .dose;
-
-    });
-
-}
-
-
-}
 function calculate(){
 
+    try{
 
-try{
+        const target = parseFloat(targetInput.value);
+        const work = parseFloat(workInput.value);
+        const half = parseFloat(halfInput.value);
 
-    const target =
-        parseFloat(
-            targetInput.value
-        );
+        if(isNaN(target)||isNaN(work)||isNaN(half)) return;
+        if(target<=0||half<=0) return;
 
-    const work =
-        parseFloat(
-            workInput.value
-        );
+        const required =
+            calcRequiredDose(target,work,half);
 
-    const half =
-        parseFloat(
-            halfInput.value
-        );
+        requiredLabel.textContent =
+            formatMbq(required);
 
-    if(
-        isNaN(target)
-        ||
-        isNaN(work)
-        ||
-        isNaN(half)
-    ){
-        return;
-    }
+        const calRows = getRows(calTable);
+        const resRows = getRows(resTable);
 
-    if(
-        target <= 0
-        ||
-        half <= 0
-    ){
-        return;
-    }
+        if(calRows.length===0) return;
 
-    const required =
-        calcRequiredDose(
-            target,
-            work,
-            half
-        );
+        validateTimeOrder(calRows,"検定放射能計");
+        validateTimeOrder(resRows,"残量計");
 
-    requiredLabel.textContent =
-        formatMbq(
-            required
-        );
+        const baseTime = calRows[0].time;
 
-    const calRows =
-        getRows(
-            calTable
-        );
+        const calAvg = correctedAverage(calRows,baseTime,half);
+        const resAvg = correctedAverage(resRows,baseTime,half);
 
-    const resRows =
-        getRows(
-            resTable
-        );
+        const actual = calAvg - resAvg;
 
-    if(
-        calRows.length === 0
-    ){
-        return;
-    }
+        if(actual<=0){
+            statusLabel.textContent = "残量平均が検定平均を超えています";
+            statusLabel.style.color = "red";
+            return;
+        }
 
-    validateTimeOrder(
-        calRows,
-        "検定放射能計"
-    );
+        const difference = actual - required;
 
-    validateTimeOrder(
-        resRows,
-        "残量計"
-    );
+        calAvgLabel.textContent = formatMbq(calAvg);
+        resAvgLabel.textContent = formatMbq(resAvg);
+        actualLabel.textContent = formatMbq(actual);
+        diffLabel.textContent = formatDiff(difference);
 
-    const baseTime =
-        calRows[0].time;
+        const reachMinutes =
+            calcReachMinutes(actual,target,half);
 
-    const calAvg =
-        correctedAverage(
-            calRows,
-            baseTime,
-            half
-        );
+        const reachTime = baseTime + reachMinutes;
 
-    const resAvg =
-        correctedAverage(
-            resRows,
-            baseTime,
-            half
-        );
+        reachLabel.textContent =
+            minutesToHms(reachTime);
 
-    const actual =
-        calAvg - resAvg;
+        const now = new Date(Date.now() + timeOffsetMs);
 
-    if(
-        actual <= 0
-    ){
+        const nowMinutes =
+            now.getHours()*60 +
+            now.getMinutes() +
+            now.getSeconds()/60;
 
-        statusLabel.textContent =
-            "残量平均が検定平均を超えています";
-
-        statusLabel.style.color =
-            "red";
-
-        return;
-    }
-
-    const difference =
-        actual - required;
-
-    calAvgLabel.textContent =
-        formatMbq(
-            calAvg
-        );
-
-    resAvgLabel.textContent =
-        formatMbq(
-            resAvg
-        );
-
-    actualLabel.textContent =
-        formatMbq(
-            actual
-        );
-
-    diffLabel.textContent =
-        formatDiff(
-            difference
-        );
-
-    const reachMinutes =
-        calcReachMinutes(
-            actual,
-            target,
-            half
-        );
-
-    const reachTime =
-        baseTime +
-        reachMinutes;
-
-    reachLabel.textContent =
-        minutesToHms(
-            reachTime
-        );
-
-    const now =
-        new Date();
-
-    const nowMinutes =
-        (
-            now.getHours()
-            * 60
-        )
-        +
-        now.getMinutes()
-        +
-        (
-            now.getSeconds()
-            / 60
-        );
-
-    const remainSeconds =
-        Math.floor(
-            (
-                reachTime
-                -
-                nowMinutes
-            )
-            *
-            60
-        );
-
-    if(
-        remainSeconds <= 0
-    ){
+        const remainSeconds =
+            Math.floor((reachTime - nowMinutes)*60);
 
         countdownLabel.textContent =
-            "開始可能";
+            remainSeconds<=0
+                ? "開始可能"
+                : Math.floor(remainSeconds/60)
+                    + "分 " + (remainSeconds%60) + "秒";
 
+        statusLabel.textContent = "正常";
+        statusLabel.style.color = "green";
+
+    }catch(ex){
+        statusLabel.textContent = ex.message;
+        statusLabel.style.color = "red";
     }
-    else{
-
-        countdownLabel.textContent =
-            Math.floor(
-                remainSeconds
-                /
-                60
-            )
-            +
-            "分 "
-            +
-            (
-                remainSeconds
-                %
-                60
-            )
-            +
-            "秒";
-
-    }
-
-    statusLabel.textContent =
-        "正常";
-
-    statusLabel.style.color =
-        "green";
-
-}
-catch(ex){
-
-    statusLabel.textContent =
-        ex.message;
-
-    statusLabel.style.color =
-        "red";
-
 }
 
+/* events */
+targetInput.addEventListener("input",()=>{saveState();calculate();});
+workInput.addEventListener("input",()=>{saveState();calculate();});
+halfInput.addEventListener("input",()=>{saveState();calculate();});
 
-}
-
-targetInput.addEventListener(
-"input",
-()=>{
-
+offsetInput.addEventListener("input",()=>{
+    const sec = parseFloat(offsetInput.value);
+    timeOffsetMs = isNaN(sec) ? 0 : sec * 1000;
     saveState();
-
     calculate();
+});
 
-}
-);
-
-workInput.addEventListener(
-"input",
-()=>{
-
-
-    saveState();
-
-    calculate();
-
-}
-);
-
-halfInput.addEventListener(
-"input",
-()=>{
-
-
-    saveState();
-
-    calculate();
-
-}
-);
-
+/* init */
 initializeTables();
-
 restoreState();
-
 calculate();
 
-setInterval(
-calculate,
-1000
-);
+setInterval(calculate,1000);
